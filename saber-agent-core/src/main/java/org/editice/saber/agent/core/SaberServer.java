@@ -1,6 +1,7 @@
 package org.editice.saber.agent.core;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.instrument.Instrumentation;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -12,6 +13,7 @@ import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.nio.channels.SelectionKey.OP_ACCEPT;
@@ -36,10 +38,13 @@ public class SaberServer {
         }
     };
 
-    private final ExecutorService executorService = Executors.newCachedThreadPool(r -> {
-        final Thread t = new Thread(r, "saber-command-execute-daemon");
-        t.setDaemon(true);
-        return t;
+    private final ExecutorService executorService = Executors.newCachedThreadPool(new ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+            final Thread t = new Thread(r, "saber-command-execute-daemon");
+            t.setDaemon(true);
+            return t;
+        }
     });
 
 
@@ -85,7 +90,10 @@ public class SaberServer {
             serverSocketChannel.configureBlocking(false);
             serverSocketChannel.socket().setSoTimeout(argsParam.getConnectTimeout());
             serverSocketChannel.socket().setReuseAddress(true);
-            serverSocketChannel.register(selector, OP_ACCEPT);
+            final SelectionKey serverSocketChannelSelectionKey =
+                    serverSocketChannel.register(selector, OP_ACCEPT);
+
+            System.err.println("server socket interest ops: "+serverSocketChannelSelectionKey.interestOps());
 
             // 服务器挂载端口
             serverSocketChannel.socket().bind(getInetSocketAddress(argsParam.getTargetIp(), argsParam.getTargetPort()), 24);
@@ -99,13 +107,12 @@ public class SaberServer {
         }
     }
 
-    private void activeSelectorDaemon(Selector selector, ArgsParam argsParam) {
+    private void activeSelectorDaemon(final Selector selector, final ArgsParam argsParam) {
         final ByteBuffer byteBuffer = ByteBuffer.allocate(4 * 1024);//默认4K
 
         final Thread gaServerSelectorDaemon = new Thread("saber-selector-daemon") {
             @Override
             public void run() {
-                System.err.println("trace: 1");
 
                 while (!isInterrupted()
                         && isBind()) {
@@ -114,6 +121,7 @@ public class SaberServer {
 
                         while (selector.isOpen()
                                 && selector.select() > 0) {
+
                             final Iterator<SelectionKey> it = selector.selectedKeys().iterator();
                             while (it.hasNext()) {
                                 final SelectionKey key = it.next();
@@ -152,10 +160,12 @@ public class SaberServer {
         socketChannel.socket().setSoTimeout(param.getConnectTimeout());
         socketChannel.socket().setTcpNoDelay(true);
 
+        //FIXME 备注，这里可以有第三个参数，用于透传上下文会话中自定义的一些对象
         socketChannel.register(selector, SelectionKey.OP_READ);
 
         //输出logo
         String logoMsg = "HELLO EVERY BODY";
+        System.err.println(logoMsg);
         ByteBuffer byteBuffer = ByteBuffer.wrap(logoMsg.getBytes(DEFAULT_CHARSET));
         while(byteBuffer.hasRemaining()){
             socketChannel.write(byteBuffer);
@@ -189,6 +199,7 @@ public class SaberServer {
                         try {
 
                             System.err.println("test info");
+
                             // 命令执行
 //                            commandHandler.executeCommand(line, session);
 
@@ -268,3 +279,4 @@ public class SaberServer {
         return saberServer;
     }
 }
+

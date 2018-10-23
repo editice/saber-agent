@@ -37,17 +37,16 @@ public class SaberAgentLauncher {
 
 
             //use reflection to get java pid from args
-            final Class<?> argsParamClass = classLoader.loadClass("org.editice.saber.tool.core.ArgsParam");
+            final Class<?> argsParamClass = classLoader.loadClass("org.editice.saber.agent.core.ArgsParam");
             final Object argsParamObj = argsParamClass.getMethod("toParam", String.class).invoke(null, agetArgs);
             final int javaPid = (Integer) argsParamClass.getMethod("getJavaPid", (Class<?>[]) null)
                     .invoke(argsParamObj, (Object[]) null);
 
             //get agent server from classloader, if not exists then build one
-            final Class<?> saberServerClass = classLoader.loadClass("org.editice.saber.tool.core.SaberServer");
+            final Class<?> saberServerClass = classLoader.loadClass("org.editice.saber.agent.core.SaberServer");
             final Object saberServerObj = saberServerClass.getMethod("getInstance", int.class, Instrumentation.class)
                     .invoke(null, javaPid, inst);
 
-            System.err.println(saberServerObj.getClass().getName());
             final Boolean isBind = (Boolean) saberServerClass.getMethod("isBind").invoke(saberServerObj);
 
             System.err.println("isBind:" + isBind);
@@ -60,6 +59,9 @@ public class SaberAgentLauncher {
                     throw t;
                 }
             }
+
+            final Boolean lastCheck = (Boolean) saberServerClass.getMethod("isBind").invoke(saberServerObj);
+            System.err.println("isBind:" + lastCheck);
 
         } catch (Throwable t) {
             t.printStackTrace();

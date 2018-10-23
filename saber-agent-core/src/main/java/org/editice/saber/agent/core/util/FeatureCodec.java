@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
 
-import static org.editice.saber.tool.core.util.GaCheckUtils.isEquals;
-import static org.editice.saber.tool.core.util.GaCheckUtils.isIn;
+import static org.editice.saber.agent.core.util.GaCheckUtils.isEquals;
+import static org.editice.saber.agent.core.util.GaCheckUtils.isIn;
 
 /**
  * Feature编解器(线程安全)<br/>
